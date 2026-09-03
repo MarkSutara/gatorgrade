@@ -160,6 +160,26 @@ def test_history_pruning_removes_older_oversized_report(
     assert len(reports) == 1
     assert reports[0]["report"]["checks"][0]["check_id"] == "small"
 
+def test_history_single_oversized_report_not_pruned(
+    tmp_path: Path,
+) -> None:
+    """Single oversized report must follow guidelines."""
+    large_report = {
+        "checks": [{"check_id": "large", "status": False}],
+        "diagnostic": "x" * (BYTES_PER_MIB + 100),
+    }
+
+    path = save_report_history(
+        large_report,
+        scope="project-one",
+        history_directory=tmp_path,
+        max_size_mib=1,
+        current_time=datetime.datetime(2026, 1, 1, tzinfo=UTC),
+    )
+
+    # currently fails because prune_report_history(), regression test
+    # stops when only one file remains
+    assert path.stat().st_size <= BYTES_PER_MIB
 
 def test_failed_ids_use_union_of_newest_reports_and_scope(
     tmp_path: Path,
