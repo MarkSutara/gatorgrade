@@ -188,9 +188,9 @@ def _trim_oversized_report(
     while True:
         payload = _make_history_payload(trimmed_report, scope, timestamp)
         payload_size = len(
-            json.dumps(payload, ensure_ascii=False, indent=HISTORY_JSON_INDENT).encode(
-                "utf-8"
-            )
+            json.dumps(
+                payload, ensure_ascii=False, indent=HISTORY_JSON_INDENT
+            ).encode("utf-8")
             + SCOPE_SEPARATOR.encode("utf-8")
         )
         if payload_size <= max_size_bytes:
