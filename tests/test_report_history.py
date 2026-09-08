@@ -177,8 +177,6 @@ def test_history_single_oversized_report_not_pruned(
         current_time=datetime.datetime(2026, 1, 1, tzinfo=UTC),
     )
 
-    # currently fails because prune_report_history(), regression test
-    # stops when only one file remains
     assert path.stat().st_size <= BYTES_PER_MIB
 
 def test_failed_ids_use_union_of_newest_reports_and_scope(
