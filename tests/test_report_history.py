@@ -160,6 +160,7 @@ def test_history_pruning_removes_older_oversized_report(
     assert len(reports) == 1
     assert reports[0]["report"]["checks"][0]["check_id"] == "small"
 
+
 def test_history_single_oversized_report_not_pruned(
     tmp_path: Path,
 ) -> None:
@@ -178,6 +179,7 @@ def test_history_single_oversized_report_not_pruned(
     )
 
     assert path.stat().st_size <= BYTES_PER_MIB
+
 
 def test_failed_ids_use_union_of_newest_reports_and_scope(
     tmp_path: Path,
