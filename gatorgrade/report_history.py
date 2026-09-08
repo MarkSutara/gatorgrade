@@ -173,6 +173,37 @@ def _validate_positive_limit(value: int, label: str) -> None:
         raise ValueError(f"{label} must be a positive integer, got {value}")
 
 
+def _trim_oversized_report(
+    report: dict[str, Any],
+    scope: str,
+    timestamp: datetime.datetime,
+    max_size_bytes: int,
+) -> dict[str, Any]:
+    """Trim the diagnostic field so the saved payload will fit in the size budget."""
+    trimmed_report = copy.deepcopy(report)
+    diagnostic = trimmed_report.get("diagnostic")
+    if not isinstance(diagnostic, str):
+        return trimmed_report
+
+    while True:
+        payload = _make_history_payload(trimmed_report, scope, timestamp)
+        payload_size = len(
+            json.dumps(payload, ensure_ascii=False, indent=HISTORY_JSON_INDENT).encode(
+                "utf-8"
+            )
+            + SCOPE_SEPARATOR.encode("utf-8")
+        )
+        if payload_size <= max_size_bytes:
+            return trimmed_report
+        if len(diagnostic) <= 1:
+            trimmed_report["diagnostic"] = "[truncated]"
+            return trimmed_report
+        overshoot = payload_size - max_size_bytes
+        trim_size = max(1, overshoot + len("...") + 64)
+        diagnostic = diagnostic[:-trim_size]
+        trimmed_report["diagnostic"] = f"{diagnostic}..."
+
+
 def prune_report_history(
     history_directory: Path,
     max_report_count: int = DEFAULT_HISTORY_REPORT_COUNT,
@@ -188,7 +219,9 @@ def prune_report_history(
     deleted_files: list[Path] = []
     while (
         len(history_files) > max_report_count or total_size > maximum_size
-    ) and len(history_files) > 1:
+    ) and history_files:
+        if len(history_files) == 1 and total_size > maximum_size:
+            break
         oldest_file = history_files.pop(0)
         oldest_size = file_sizes.pop(0)
         oldest_file.unlink()
@@ -216,7 +249,14 @@ def save_report_history(  # noqa: PLR0913
     _make_history_directory(destination_directory)
     timestamp = _normalise_timestamp(current_time)
     destination = destination_directory / _history_filename(timestamp)
-    payload = _make_history_payload(report, scope, timestamp)
+    max_size_bytes = max_size_mib * BYTES_PER_MIB
+    trimmed_report = _trim_oversized_report(
+        report,
+        scope,
+        timestamp,
+        max_size_bytes,
+    )
+    payload = _make_history_payload(trimmed_report, scope, timestamp)
     _write_json_atomically(destination, payload)
     prune_report_history(
         destination_directory,
