@@ -376,6 +376,22 @@ and did not fail in that report. Historical matching uses each check's exact
 both status filters are supplied together they intersect their matching checks,
 and any `--filter-query` text filter then narrows that intersection second.
 
+`_trim_oversized_report()` A helper function checks the size of
+the report before it is saved. If the report is too large, it progressively
+shortens the `diagnostic` field until the serialized report fits within the
+configured maximum size. The function works on a copy of the report so the
+original report is not modified.
+
+`save_report_history()` This function calculates the
+maximum allowed size in bytes and calls `_trim_oversized_report()` before
+creating and saving the history payload. This ensures that an individual
+oversized report is trimmed before it is written to disk.
+
+`prune_report_history()` The pruning logic was adjusted so
+that the final remaining report is not deleted simply because it exceeds the
+size limit. Older reports are still removed when multiple reports cause the
+configured count or total-size limit to be exceeded.
+
 ### File Reports
 
 Save a report directly to a file path:
